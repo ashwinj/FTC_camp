@@ -1,11 +1,9 @@
-
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
 @Autonomous(name = "test", group = "Taus")
-public class Test extends AutonomousMethods {
+public class test extends AutonomousMethods {
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -30,7 +28,7 @@ public class Test extends AutonomousMethods {
         robot.shooter.setVelocityPIDFCoefficients(p,i,d,f);
         robot.shooter.setVelocity(powerShotPower);
 
-        toAngle(-20, 1);
+        forward(1, 2, 0);
 
     }
 }

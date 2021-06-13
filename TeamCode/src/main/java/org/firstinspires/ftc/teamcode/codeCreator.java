@@ -71,6 +71,7 @@ public class codeCreator extends LinearOpMode {
     ArrayList<Double> drop= new ArrayList<Double>();
     ArrayList<Double> pickUp= new ArrayList<Double>();
     ArrayList<Double> indexer= new ArrayList<Double>();
+    Thread rec = new RecordingThread();
 
     @Override
     //run file
@@ -91,8 +92,8 @@ public class codeCreator extends LinearOpMode {
         //File file = new File(method.captureDirectory, filename);
 
         waitForStart();
-        Thread rec = new RecordingThread();
-        rec.start();
+
+        //rec.start();
         method.setShooterPower(method.shooterPower);
         method.controlIndexServo(1);
         method.controlBlocker(0);
@@ -487,21 +488,24 @@ public class codeCreator extends LinearOpMode {
                 indexer.clear();
                 speedsFlywheel.clear();
                 speedsIntake.clear();
+                rec.start();
             }
             else{
+                rec.interrupt();
                 String filename = programname;
                 File file = AppUtil.getInstance().getSettingsFile(filename);
-                ReadWriteFile.writeFile(file, speedsBl.toString() + "\n");
-                ReadWriteFile.writeFile(file, speedsBr.toString() + "\n");
-                ReadWriteFile.writeFile(file, speedsFl.toString() + "\n");
-                ReadWriteFile.writeFile(file, speedsFr.toString() + "\n");
-                ReadWriteFile.writeFile(file, speedsIntake.toString() + "\n");
-                ReadWriteFile.writeFile(file, speedsFlywheel.toString() + "\n");
-                ReadWriteFile.writeFile(file, drop.toString() + "\n");
-                ReadWriteFile.writeFile(file, pickUp.toString() + "\n");
-                ReadWriteFile.writeFile(file, indexer.toString() + "\n");
-                ReadWriteFile.writeFile(file, toAngle.toString() + "\n");
-                ReadWriteFile.writeFile(file, stoptime + "\n");
+                String k = speedsBl.toString() + "\n";
+                k+=speedsBr.toString() + "\n";
+                k+=speedsFl.toString() + "\n";
+                k+=speedsFr.toString() + "\n";
+                k+=speedsIntake.toString() + "\n";
+                k+=speedsFlywheel.toString() + "\n";
+                k+=drop.toString() + "\n";
+                k+=pickUp.toString() + "\n";
+                k+=indexer.toString() + "\n";
+                k+=toAngle.toString() + "\n";
+                k+=stoptime + "\n";
+                ReadWriteFile.writeFile(file, k);
             }
             method.runtime3.reset();
             isLeftStick = true;

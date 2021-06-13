@@ -13,7 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import java.io.File;
 import java.util.LinkedHashMap;
 
-@TeleOp(name = "Double Driver blue", group = "Taus")
+@TeleOp(name = "Double Driver red", group = "Taus")
 
 //@Config
 //hi
@@ -35,6 +35,7 @@ public class TeleopBlue extends LinearOpMode {
     boolean intakingRing = true;
     double rings = 0;
     boolean shooting = false;
+    boolean middleGoal = false;
 
     boolean recording = false;
     boolean isLeftStick = false;
@@ -44,6 +45,7 @@ public class TeleopBlue extends LinearOpMode {
     int powerShots = 0;
     int numRingsMid = 0;
     int numRingsMidEnd = 0;
+    int addOns = 90;
     double timeIntaking = 0;
     double timeShooting = 0;
 
@@ -65,6 +67,7 @@ public class TeleopBlue extends LinearOpMode {
     double middleWheelInches;
     double anglingPow = 0;
     boolean clicked = false;
+    boolean shootingTime = false;
 
     @Override
     //run file
@@ -94,6 +97,8 @@ public class TeleopBlue extends LinearOpMode {
 
         method.runtime2.reset();
         method.runtime3.reset();
+        method.shooting.reset();
+        method.intaking.reset();
         pos.start();
         while (opModeIsActive()) {
             drive();
@@ -107,7 +112,7 @@ public class TeleopBlue extends LinearOpMode {
 
             shoot();
             //updateShootingParameters();
-            toAngle();
+            //toAngle();
             powerShot();
 
             //goToPosition();
@@ -115,22 +120,25 @@ public class TeleopBlue extends LinearOpMode {
             resetAngle();
             ringIn();
 
-//            telemetry.addData("angle", (int)method.getHeadingRaw());
-//            //telemetry.addData("target", (int)method.shooterRpm);
-//            //telemetry.addData("rpm", (int)(method.robot.shooter.getVelocity()/28.0)*60);
-//            telemetry.addData("numRings", rings);
-//            telemetry.addData("time", method.runtime3.seconds());
-//            telemetry.addData("l", leftWheelInches);
-//            telemetry.addData("r", rightWheelInches);
-//            telemetry.addData("m", middleWheelInches);
-//
-//            telemetry.update();
-//            telemetry.clear();
+            telemetry.addData("angle", (int)method.getHeading());
+            telemetry.addData("target", (int)method.shooterRpm);
+            telemetry.addData("rpm", (int)(method.robot.shooter.getVelocity()/28.0)*60);
+            telemetry.addData("numRings", rings);
+            //telemetry.addData("time", method.runtime3.seconds());
+            telemetry.addData("position", "[" +method.currentXPosition + ", " + method.currentYPosition + "]");
+
+
+            telemetry.update();
+            telemetry.clear();
 
         }
 
         method.setAllMotorsTo(0);
         pos.interrupt();
+        angling.interrupt();
+
+        method.setShooterPower(0);
+        method.setIntakePower(0);
     }
 
     //drive base movement
@@ -171,8 +179,11 @@ public class TeleopBlue extends LinearOpMode {
             angling.interrupt();
             shooting = false;
         }
-        else{
+        else if (shooting&& Math.abs(method.getHeading()-method.shootingAngle)>1){
             rotationValue=anglingPow;
+        }
+        else{
+            rotationValue=0;
         }
         if(Math.abs(gamepad1.left_stick_x)>.05) {
             stickX = gamepad1.left_stick_x;
@@ -243,13 +254,13 @@ public class TeleopBlue extends LinearOpMode {
             }
         }
         if(gamepad1.dpad_up && !dpadPressed){
-            method.shooterRpm +=50;
+            method.shooterRpm +=10;
             method.shooterPower = (method.shooterRpm*28)/60.0;
             method.setShooterPower(method.shooterPower);
             dpadPressed=true;
         }
         else if(gamepad1.dpad_down && !dpadPressed){
-            method.shooterRpm-=50;
+            method.shooterRpm-=10;
             method.shooterPower = (method.shooterRpm*28)/60.0;
             method.setShooterPower(method.shooterPower);
             dpadPressed=true;
@@ -273,43 +284,47 @@ public class TeleopBlue extends LinearOpMode {
             method.currentXPosition = 12;
             method.currentYPosition = 72;
             updateShootingParameters();
-
             shooting = true;
+            middleGoal = false;
         }
         if(gamepad2.dpad_down){
             method.currentXPosition = 36;
             method.currentYPosition = 72;
             updateShootingParameters();
             shooting = true;
+            middleGoal = false;
         }
         if(gamepad2.right_bumper){
             method.currentXPosition = 60;
             method.currentYPosition = 72;
             updateShootingParameters();
             shooting = true;
+            middleGoal = false;
         }
         if(gamepad2.right_trigger>.1){
-            method.shootingAngle = -15;
-            method.shooterRpm = 1850;
-            method.shooterPower = (method.shooterRpm*28)/60.0;
-            method.setShooterPower(method.shooterPower);
+            method.currentXPosition = 36;
+            method.currentYPosition = 72;
+            method.updateShootingParameters4();
             shooting = true;
+            middleGoal = true;
         }
         if(gamepad1.left_bumper){
             updateShootingParameters();
             shooting=true;
         }
+
         if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)&&!(gamepad1.right_trigger>.1)&&!(gamepad1.left_trigger>.1)){
-            if(Math.abs(method.getHeading()-method.shootingAngle)>1) {
-                if(!angling.isAlive()) {
-                    angling.start();
-                }
+            if(!angling.isAlive()) {
+                angling.start();
+                shooting = true;
             }
+            //method.toAngle(method.shootingAngle, 1);
         }
         else{
-            shooting=false;
             if (angling.isAlive()){
                 angling.interrupt();
+                anglingPow = 0;
+                shooting=false;
             }
         }
     }
@@ -341,7 +356,7 @@ public class TeleopBlue extends LinearOpMode {
         }
         if(gamepad2.dpad_right){
             method.setShooterPower(method.powerShotPower);
-            method.toAngle(-6, .5);
+            method.toAngle(-16, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
             if (rings>0) {
@@ -351,6 +366,7 @@ public class TeleopBlue extends LinearOpMode {
     }
     public void shoot(){
         if(gamepad1.x) {
+            method.setAllMotorsTo(0);
             method.shootRings(3);
             if (recording) {
                 if(method.runtime3.seconds()<90) {
@@ -374,7 +390,13 @@ public class TeleopBlue extends LinearOpMode {
         }
     }
     public void updateShootingParameters(){
-        method.updateShootingParameters();
+        if (middleGoal){
+            method.updateShootingParameters4();
+        }
+        else {
+            method.updateShootingParameters2();
+        }
+
     }
 
     //subsystems and utilities
@@ -430,18 +452,21 @@ public class TeleopBlue extends LinearOpMode {
     }
     public void intake(){
         method.robot.intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        if (Math.abs(gamepad2.left_stick_y)>.05) {
-            //method.setIntakePower(-gamepad2.left_stick_y);
-            method.setIntakePower(-gamepad2.left_stick_y);
-            intakingRing=-gamepad2.left_stick_y>.05;
-        }
+//        if (Math.abs(gamepad2.left_stick_y)>.05) {
+//            //method.setIntakePower(-gamepad2.left_stick_y);
+//            method.setIntakePower(-gamepad2.left_stick_y);
+//            intakingRing=-gamepad2.left_stick_y>.05;
+//        }
         if (Math.abs(gamepad2.left_stick_y)>.05&&rings<3||gamepad2.left_stick_button) {
             //method.setIntakePower(-gamepad2.left_stick_y);
             method.setIntakePower(-gamepad2.left_stick_y);
             intakingRing=-gamepad2.left_stick_y>.05;
         }
         else if(Math.abs(gamepad2.left_stick_y)>.05&&rings>2){
-            method.setIntakePower(.5*-gamepad2.left_stick_y);
+            method.setIntakePower(1*-gamepad2.left_stick_y);
+        }
+        else if(gamepad1.left_stick_button){
+            method.setIntakePower(1);
         }
         else{
             method.setIntakePower(0);
@@ -501,17 +526,26 @@ public class TeleopBlue extends LinearOpMode {
             }
         }
         if(rings<3&&method.runtime3.seconds()<90 && recording){
-            if(!intaking){
-                timeShooting+=method.intaking.seconds();
-                intaking=true;
+            if(shootingTime){
+                shootingTime = false;
                 method.intaking.reset();
             }
+            timeIntaking+=method.intaking.seconds();
+            method.intaking.reset();
+            if(!intaking){
+                intaking=true;
+            }
+
         }
         if(rings>2&&method.runtime3.seconds()<90 && recording){
+            if(!shootingTime){
+                shootingTime = true;
+                method.shooting.reset();
+            }
+            timeShooting+=method.shooting.seconds();
+            method.shooting.reset();
             if(intaking){
-                timeIntaking+=method.intaking.seconds();
                 intaking=false;
-                method.intaking.reset();
             }
         }
     }
@@ -529,12 +563,14 @@ public class TeleopBlue extends LinearOpMode {
             if(recording){
                 method.runtime3.reset();
                 method.intaking.reset();
+                method.shooting.reset();
                 numRings = 0;
                 numRingsEnd = 0;
                 wobbleGoals = 0;
                 powerShots = 0;
                 numRingsMid = 0;
                 numRingsMidEnd = 0;
+                addOns=90;
                 timeIntaking = 0;
                 timeShooting = 0;
                 intaking = true;
@@ -546,6 +582,7 @@ public class TeleopBlue extends LinearOpMode {
                 points.put("endgame rings mid", numRingsMidEnd);
                 points.put("power shots", powerShots);
                 points.put("wobble goals", wobbleGoals);
+                points.put("addOns", addOns);
                 int index = 0;
                 String current= "";
                 while(!(gamepad1.right_trigger>.1)){
@@ -577,32 +614,37 @@ public class TeleopBlue extends LinearOpMode {
                 numRingsMidEnd = points.get("endgame rings mid");
                 powerShots = points.get("power shots");
                 wobbleGoals = points.get("wobble goals");
+                addOns = points.get("addOns");
                 int pointsRings=numRings*6;
                 int pointsRingsMid=numRingsMid*4;
-                int cycles = (int)(numRings/3);
+                int cycles = (numRings+numRingsMid)/3;
                 int pointsWobble=wobbleGoals*20;
                 int pointsPower=powerShots*15;
-                int pointsRingsEnd =numRingsEnd*6;
-                int pointsRingsEndMid =numRingsMidEnd*4;
-                int cycleTime = (numRings+numRings)/90;
+                int pointsRingsEnd=numRingsEnd*6;
+                int pointsRingsEndMid=numRingsMidEnd*4;
+                int cycleTime = (90/cycles);
+                if(method.runtime3.seconds()<90){
+                    cycleTime = (int)(method.runtime3.seconds()/cycles);
+                }
                 int total = pointsRings+pointsRingsEnd+pointsRingsMid+pointsRingsEndMid+pointsWobble+pointsPower;
                 double intakingTime = (int)method.intaking.seconds();
                 double shootingTime = (int)method.shooting.seconds();
-                double intakingTimePerCycle = intakingTime/cycles;
-                double shootingTimePerCycle = shootingTime/cycles;
+                double intakingTimePerCycle = (int)(intakingTime/cycles);
+                double shootingTimePerCycle = (int)(shootingTime/cycles);
                 summary+="Teleop:\n";
                 summary+=numRings + " rings in high (" + pointsRings + " pts)\n";
                 summary+=numRingsMid + " rings in mid (" + pointsRingsMid + " pts)\n";
                 summary+=cycles + " cycles\n";
-                summary+="cycle time of " + cycleTime + " sec/cycle\n";
-                summary+=shootingTime + " shooting (" + shootingTimePerCycle + "/cycle)\n";
-                summary+=intakingTime + " intaking (" + intakingTimePerCycle + "/cycle)\n";
+                summary+="cycle time of " + cycleTime + " s/cycle\n";
+                summary+=shootingTime + " shooting (" + shootingTimePerCycle + "s/cycle)\n";
+                summary+=intakingTime + " intaking (" + intakingTimePerCycle + "s/cycle)\n";
                 summary+="Endgame:\n";
                 summary+=numRingsEnd + " endgame rings in high(" + pointsRingsEnd + " pts)\n";
                 summary+=numRingsMidEnd + " endgame rings in mid(" + pointsRingsEndMid + " pts)\n";
                 summary+= wobbleGoals + "/2 wobble goals (" + pointsWobble + " pts)\n";
-                summary+= powerShots + "/3 powershots (" + pointsWobble + " pts)\n\n";
+                summary+= powerShots + "/3 powershots (" + pointsPower + " pts)\n\n";
                 summary+= "total: " + total + "\n";
+                summary+= "total+: " + (total+addOns) + "\n";
                 telemetry.addLine(summary);
                 telemetry.update();
                 sleep(1000);
@@ -656,6 +698,8 @@ public class TeleopBlue extends LinearOpMode {
         @Override
         public void run() {
             while(!isInterrupted()) {
+                method.updateShootingParameters4();
+
                 anglingPow = method.toAngle2(method.shootingAngle, 1);
             }
         }
@@ -669,8 +713,8 @@ public class TeleopBlue extends LinearOpMode {
         public void run() {
             while (!isInterrupted()) {
                 if (gamepad1.dpad_left) {
-                    method.currentXPosition=9;
-                    method.currentYPosition=9;
+                    method.currentXPosition=108;
+                    method.currentYPosition=72;
                 }
                 leftWheelInches = (method.robot.intake2.getCurrentPosition() / method.encoderCountsEnc) * Math.PI * method.wheelDiameterEnc * method.yMult;
                 rightWheelInches = (method.robot.encoders.getCurrentPosition() / method.encoderCountsEnc) * Math.PI * method.wheelDiameterEnc * method.yMult;
@@ -696,17 +740,17 @@ public class TeleopBlue extends LinearOpMode {
                 double calculationAngleY =  thetaY-gyroAngle;
 
                 double deltaY2 = Math.sin(calculationAngleY) * deltaY1;
-                if((Math.sin(calculationAngleX) * deltaX1)>(Math.sin(calculationAngleY) * deltaY1)){
+                if(Math.abs(Math.sin(calculationAngleX) * deltaX1)>Math.abs(Math.sin(calculationAngleY) * deltaY1)){
                     deltaY2 = Math.sin(calculationAngleX) * deltaX1;
                 }
                 if(((Math.sin(calculationAngleY) * deltaY1)>0&&(Math.sin(calculationAngleX) * deltaX1)<0)||((Math.sin(calculationAngleY) * deltaY1)<0&&(Math.sin(calculationAngleX) * deltaX1)>0)) {
                     deltaY2 = (Math.sin(calculationAngleY) * deltaY1) + (Math.sin(calculationAngleX) * deltaX1);
                 }
                 double deltaX2 = Math.cos(calculationAngleX) * deltaX1;
-                if((Math.cos(calculationAngleY) * deltaY1)>(Math.cos(calculationAngleX) * deltaX1)){
+                if(Math.abs(Math.cos(calculationAngleY) * deltaY1)>Math.abs(Math.cos(calculationAngleX) * deltaX1)){
                     deltaX2 = Math.cos(calculationAngleY) * deltaY1;
                 }
-                if(((Math.cos(calculationAngleY) * deltaY1)>0&&(Math.cos(calculationAngleX) * deltaX1)<0)||((Math.cos(calculationAngleY) * deltaY1)<0&&(Math.cos(calculationAngleX) * deltaX1)>0)) {
+                if((((Math.cos(calculationAngleY) * deltaY1)>0)&&(Math.cos(calculationAngleX) * deltaX1)<0)||(((Math.cos(calculationAngleY) * deltaY1)<0)&&((Math.cos(calculationAngleX) * deltaX1)>0))) {
                     deltaX2 = Math.cos(calculationAngleY) * deltaY1 + Math.cos(calculationAngleX) * deltaX1;
                 }
 
@@ -727,8 +771,8 @@ public class TeleopBlue extends LinearOpMode {
                         method.currentXPosition = 9;
                     }
 
-                    else if (method.currentXPosition>86){
-                        method.currentXPosition = 86;
+                    else if (method.currentXPosition>132.5){
+                        method.currentXPosition = 132.5;
                     }
                     previousX = currentX;
                     previousY = currentY;
@@ -739,6 +783,7 @@ public class TeleopBlue extends LinearOpMode {
 //                    telemetry.addData("current Y", currentY);
 //                    telemetry.update();
                 }
+                toAngle();
             }
         }
     }
