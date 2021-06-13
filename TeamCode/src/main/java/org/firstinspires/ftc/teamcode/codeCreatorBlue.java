@@ -6,7 +6,6 @@ package org.firstinspires.ftc.teamcode;
 //import com.acmerobotics.dashboard.config.Config;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -21,10 +20,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 //@Disabled
-@TeleOp(name = "codeCreator", group = "Taus")
+@TeleOp(name = "codeCreatorBlue", group = "Taus")
 //@Config
 
-public class codeCreator extends LinearOpMode {
+public class codeCreatorBlue extends LinearOpMode {
 
     public AutonomousMethods method = new AutonomousMethods();
     boolean isAPressed = false;
@@ -41,12 +40,14 @@ public class codeCreator extends LinearOpMode {
     boolean RingIn = false;
     boolean intakingRing = true;
     double rings = 0;
+    double anglingPow = 0;
     boolean shooting = false;
     boolean recording = false;
     boolean isLeftStick = false;
 	boolean r0 = true;
 	boolean r1 = true;
 	boolean r4 = true;
+	boolean middleGoal = false;
     int a = 0;
 	String programname = "moving"+a;
 
@@ -55,12 +56,16 @@ public class codeCreator extends LinearOpMode {
     double previousY = 0;
     double previousX = 0;
     double prevMagnitude = 0;
+    double calcTime;
     double stoptime = 0;
     boolean firstShot = true;
     boolean intakingInitially;
     double scale = 1;
     //double calcTime=0;
     double currentTime=0;
+    double leftWheelInches;
+    double rightWheelInches;
+    double middleWheelInches;
     LinkedHashMap<Double, Double> speedsBl= new LinkedHashMap<Double, Double>();
     LinkedHashMap<Double, Double> speedsBr= new LinkedHashMap<Double, Double>();
     LinkedHashMap<Double, Double> speedsFr= new LinkedHashMap<Double, Double>();
@@ -72,6 +77,9 @@ public class codeCreator extends LinearOpMode {
     ArrayList<Double> pickUp= new ArrayList<Double>();
     ArrayList<Double> indexer= new ArrayList<Double>();
     Thread rec = new RecordingThread();
+    Thread play = new PlaybackThread();
+    Thread angling = new Adjusting();
+    Thread pos = new Position();
 
     @Override
     //run file
@@ -112,7 +120,7 @@ public class codeCreator extends LinearOpMode {
 
         method.runtime2.reset();
         method.runtime3.reset();
-
+        pos.start();
         while (opModeIsActive()) {
             method.robot.shooter.setVelocityPIDFCoefficients(method.p,method.i,method.d,method.f);
             drive();
@@ -122,7 +130,6 @@ public class codeCreator extends LinearOpMode {
             claw();
             confirm();
             playBack();
-            blocker();
 
             //shoot();
             //updateShootingParameters();
@@ -159,8 +166,14 @@ public class codeCreator extends LinearOpMode {
             dashboardTelemetry.update();
 
         }
+        play.interrupt();
         rec.interrupt();
+        pos.interrupt();
+        angling.interrupt();
+
         method.setAllMotorsTo(0);
+        method.setShooterPower(0);
+        method.setIntakePower(0);
     }
 
     //drive base movement
@@ -185,6 +198,24 @@ public class codeCreator extends LinearOpMode {
 
         if(Math.abs(gamepad1.right_stick_x)>.05) {
             rotationValue = gamepad1.right_stick_x;
+            anglingPow = 0;
+            angling.interrupt();
+            shooting = false;
+        }
+        else if(gamepad1.right_trigger>.1){
+            rotationValue = .2;
+            anglingPow = 0;
+            angling.interrupt();
+            shooting = false;
+        }
+        else if(gamepad1.left_trigger>.1){
+            rotationValue = -.2;
+            anglingPow = 0;
+            angling.interrupt();
+            shooting = false;
+        }
+        else if (shooting&& Math.abs(method.getHeading()-method.shootingAngle)>1){
+            rotationValue=anglingPow;
         }
         else{
             rotationValue=0;
@@ -237,10 +268,10 @@ public class codeCreator extends LinearOpMode {
 
 //        multiplier = method.errorToPower(method.runtime2.seconds(), scale, 0, 1, 0);
 
-        method.robot.frontLeftMotor.setPower((((xComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);
+        method.robot.frontLeftMotor.setPower((((xComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);//x
         method.robot.backRightMotor.setPower((((xComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);//x
         method.robot.backLeftMotor.setPower((((yComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);//y
-        method.robot.frontRightMotor.setPower((((yComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);
+        method.robot.frontRightMotor.setPower((((yComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);//y
 
     }
 
@@ -284,78 +315,81 @@ public class codeCreator extends LinearOpMode {
         //}
     }
     public void toAngle(){
-        if(gamepad1.left_bumper){
+        if(gamepad2.left_bumper){
             method.currentXPosition = 12;
             method.currentYPosition = 72;
-            method.shootingAngle = 2;
-            method.shooterRpm = 2135;
-            method.shooterPower = (method.shooterRpm*28)/60.0;
-            method.setShooterPower(method.shooterPower);
-            //updateShootingParameters();
-            method.toAngle(method.shootingAngle, 1);
-            toAngle.put(currentTime, method.shootingAngle);
+            updateShootingParameters();
             shooting = true;
+            middleGoal = false;
         }
-        if(gamepad1.dpad_down){
+        if(gamepad2.dpad_down){
             method.currentXPosition = 36;
             method.currentYPosition = 72;
-//            method.shootingAngle = -15;
-//            method.shooterRpm = 2135;
-//            method.shooterPower = (method.shooterRpm*28)/60.0;
-//            method.setShooterPower(method.shooterPower);
             updateShootingParameters();
-            method.toAngle(method.shootingAngle, 1);
-            toAngle.put(currentTime, method.shootingAngle);
             shooting = true;
+            middleGoal = false;
         }
-        if(gamepad1.right_bumper){
+        if(gamepad2.right_bumper){
             method.currentXPosition = 60;
             method.currentYPosition = 72;
-//            method.shootingAngle = -35;
-//            method.shooterRpm = 2135;
-//            method.shooterPower = (method.shooterRpm*28)/60.0;
-//            method.setShooterPower(method.shooterPower);
             updateShootingParameters();
-            method.toAngle(method.shootingAngle, 1);
-            toAngle.put(currentTime, method.shootingAngle);
             shooting = true;
+            middleGoal = false;
         }
-        if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)){
-            if(Math.abs(method.getHeading()-method.shootingAngle)>1) {
-                method.toAngle(method.shootingAngle, 1);
+        if(gamepad2.right_trigger>.1){
+            method.currentXPosition = 36;
+            method.currentYPosition = 72;
+            method.updateShootingParameters4();
+            shooting = true;
+            middleGoal = true;
+        }
+        if(gamepad1.left_bumper){
+            updateShootingParameters();
+            shooting=true;
+        }
+
+        if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)&&!(gamepad1.right_trigger>.1)&&!(gamepad1.left_trigger>.1)){
+            if(!angling.isAlive()) {
+                angling.start();
+                shooting = true;
             }
+            //method.toAngle(method.shootingAngle, 1);
         }
         else{
-            shooting=false;
+            if (angling.isAlive()){
+                angling.interrupt();
+                anglingPow = 0;
+                shooting=false;
+            }
         }
     }
+    public void updateShootingParameters(){
+        if (middleGoal){
+            method.updateShootingParameters3();
+        }
+        else {
+            method.updateShootingParameters();
+        }
+
+    }
     public void powerShot(){
-//        if(gamepad1.left_trigger>.1) {
-//            telemetry.addLine(method.magic8());
-//            telemetry.update();
-//            method.powerShot(-15, -11, -6, method.powerShotPower, method.shooterPower);
-//            rings=0;
-//        }
-        if(gamepad1.dpad_left){
+        if(gamepad2.dpad_left){
             method.setShooterPower(method.powerShotPower);
             method.toAngle(-15, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
-            rings--;
         }
-        if(gamepad1.dpad_up){
+        if(gamepad2.dpad_up){
             method.setShooterPower(method.powerShotPower);
             method.toAngle(-11, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
-            rings--;
         }
-        if(gamepad1.dpad_right){
+        if(gamepad2.dpad_right){
             method.setShooterPower(method.powerShotPower);
-            method.toAngle(-6, .5);
+            method.toAngle(-16, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
-            rings--;
         }
     }
 
@@ -395,61 +429,62 @@ public class codeCreator extends LinearOpMode {
             isAPressed = false;
         }
     }
-    public void blocker(){
-        if(gamepad2.y && !isYPressed){
-            isYPressed = true;
-            if (isBlockerDown) {
-                method.controlBlocker(0);
-                isBlockerDown = false;
-            }
-            else{
-                method.controlBlocker(1);
-                isBlockerDown = true;
-            }
-        }
-        if(!gamepad2.y){
-            isYPressed = false;
-        }
-        if(method.runtime3.seconds()>90&&method.runtime3.seconds()<93){
-            method.controlBlocker(1);
-            isBlockerDown = true;
-        }
-    }
     public void intake(){
         method.robot.intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        if(gamepad1.left_trigger>.05) {
+//        if (Math.abs(gamepad2.left_stick_y)>.05) {
+//            //method.setIntakePower(-gamepad2.left_stick_y);
+//            method.setIntakePower(-gamepad2.left_stick_y);
+//            intakingRing=-gamepad2.left_stick_y>.05;
+//        }
+        if (Math.abs(gamepad2.left_stick_y)>.05&&rings<3||gamepad2.left_stick_button) {
             //method.setIntakePower(-gamepad2.left_stick_y);
-            method.setIntakePower(-1);
-            intakingRing=false;
+            method.setIntakePower(-gamepad2.left_stick_y);
+            intakingRing=-gamepad2.left_stick_y>.05;
         }
-        else if (gamepad1.right_trigger>.05) {
-            //method.setIntakePower(-gamepad2.left_stick_y);
+        else if(Math.abs(gamepad2.left_stick_y)>.05&&rings>2){
+            method.setIntakePower(1*-gamepad2.left_stick_y);
+        }
+        else if(gamepad1.left_stick_button){
             method.setIntakePower(1);
-            intakingRing=true;
         }
         else{
             method.setIntakePower(0);
         }
     }
     public void claw(){
-        if((gamepad1.b && !isBPressed)){
+        if((gamepad2.b && !isBPressed)){//||(method.runtime3.seconds()>87&&method.runtime3.seconds()<90)
             isBPressed = true;
             if (!clawClosed) {
-                method.pickUpClaw(0);
-                pickUp.add(method.runtime3.seconds());
+                method.controlClawServo(.25);//closing claw
+                isRunning = true;
                 method.runtime.reset();
-                clawClosed = true;
 
             }
             else{
-                method.dropClaw();
-                drop.add(method.runtime3.seconds());
+                method.controlArmServo(1);//moving arm down
+                isRunning = true;
                 method.runtime.reset();
-                clawClosed = false;
             }
         }
-        if(!gamepad1.b){
+        if(!gamepad2.b){
             isBPressed = false;
+        }
+        if (isRunning){
+            if (!clawClosed){
+                if (method.runtime.seconds() > .5) {
+                    method.controlArmServo(.25);//move arm up
+                    clawClosed = true;
+                    isRunning = false;
+                }
+
+            }
+            else{
+                if (method.runtime.seconds() > .5) {
+                    method.controlClawServo(.7);//opening claw
+                    clawClosed = false;
+                    isRunning = false;
+                }
+            }
         }
     }
     public void ringIn(){
@@ -466,9 +501,10 @@ public class codeCreator extends LinearOpMode {
                 rings--;
             }
         }
+
     }
     public void resetAngle() {
-        if (gamepad1.y) {
+        if (gamepad1.right_bumper) {
             method.resetAngle = method.getHeading() + method.resetAngle;
             method.resetAngle2 = method.getHeading2() +method.resetAngle2;
             method.robot.encoders.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -531,6 +567,7 @@ public class codeCreator extends LinearOpMode {
             ArrayList<Double> pickUpt= pickUp;
             ArrayList<Double> indexert= indexer;
             currentTime = method.runtime3.seconds();
+            play.start();
             while (stoptime>currentTime){
                 currentTime = method.runtime3.seconds();
                 double closest = Double.MAX_VALUE;
@@ -539,55 +576,45 @@ public class codeCreator extends LinearOpMode {
                         closest = i;
                     }
                 }
-                double calcTime = closest;
+                calcTime = closest;
                 telemetry.addData("playback", currentTime);
                 telemetry.addData("time", currentTime);
                 telemetry.update();
-
-                method.robot.backLeftMotor.setVelocity(speedsBl.get(calcTime));
-                method.robot.frontRightMotor.setVelocity(speedsFr.get(calcTime));
-                method.robot.frontLeftMotor.setVelocity(speedsFl.get(calcTime));
-                method.robot.backRightMotor.setVelocity(speedsBr.get(calcTime));
-                method.robot.intake.setPower(speedsIntake.get(calcTime));
-                method.robot.intake2.setPower(-speedsIntake.get(calcTime));
-                method.robot.shooter.setVelocity(speedsFlywheel.get(calcTime));
                 if (indexert.size()>0) {
                     if (indexert.get(0) <= currentTime) {
                         method.shootRings(3);
-                        indexer.remove(0);
+                        indexert.remove(0);
                     }
                 }
                 if (pickUpt.size()>0) {
                     if (pickUpt.get(0) <= currentTime) {
                         method.pickUpClaw(0);
-                        pickUp.remove(0);
+                        pickUpt.remove(0);
                     }
                 }
                 if(dropt.size()>0) {
                     if (dropt.get(0) <= currentTime) {
                         method.dropClaw();
-                        drop.remove(0);
+                        dropt.remove(0);
                     }
                 }
                 if(toAnglet.size()>0) {
                     for (double t :toAnglet.keySet())
                         if (t <= currentTime) {
                             method.toAngle(toAnglet.get(t), 1);
-                            toAngle.remove(t);
+                            toAnglet.remove(t);
                         }
                 }
 
             }
             method.setAllMotorsTo(0);
             method.runtime3.reset();
+            play.interrupt();
 
         }
     }
 
     //not in use
-    public void updateShootingParameters(){
-        method.updateShootingParameters();
-    }
     public void shoot(){
         if(gamepad1.x) {
             indexer.add(method.runtime3.seconds());
@@ -618,4 +645,121 @@ public class codeCreator extends LinearOpMode {
             }
         }
     }
-}
+    private class PlaybackThread extends Thread {
+        public PlaybackThread(){
+            this.setName("PlaybackThread");
+        }
+        @Override
+        public void run() {
+            //telemetry.addData("notRecording", calcTime);
+            //telemetry.log().add("running");
+            while (!isInterrupted()) {
+                currentTime = method.runtime3.seconds();
+                //telemetry.addData("recording", calcTime);
+                method.robot.backLeftMotor.setVelocity(speedsBl.get(calcTime));
+                method.robot.frontRightMotor.setVelocity(speedsFr.get(calcTime));
+                method.robot.frontLeftMotor.setVelocity(speedsFl.get(calcTime));
+                method.robot.backRightMotor.setVelocity(speedsBr.get(calcTime));
+                method.robot.intake.setPower(speedsIntake.get(calcTime));
+                method.robot.intake2.setPower(-speedsIntake.get(calcTime));
+                method.robot.shooter.setVelocity(speedsFlywheel.get(calcTime));
+                }
+            }
+        }
+    private class Adjusting extends Thread {
+        public Adjusting(){
+            this.setName("Adjusting");
+        }
+        @Override
+        public void run() {
+            while(!isInterrupted()) {
+                method.updateShootingParameters4();
+
+                anglingPow = method.toAngle2(method.shootingAngle, 1);
+            }
+        }
+    }
+    private class Position extends Thread {
+        public Position() {
+            this.setName("Position");
+        }
+
+        @Override
+        public void run() {
+            while (!isInterrupted()) {
+                if (gamepad1.dpad_left) {
+                    method.currentXPosition=108;
+                    method.currentYPosition=72;
+                }
+                leftWheelInches = (method.robot.intake2.getCurrentPosition() / method.encoderCountsEnc) * Math.PI * method.wheelDiameterEnc * method.yMult;
+                rightWheelInches = (method.robot.encoders.getCurrentPosition() / method.encoderCountsEnc) * Math.PI * method.wheelDiameterEnc * method.yMult;
+                middleWheelInches = (method.robot.intake.getCurrentPosition() / method.encoderCountsEnc) * Math.PI * method.wheelDiameterEnc * method.xMult;
+                double rotation = (method.robot.backLeftMotor.getCurrentPosition() - method.robot.frontRightMotor.getCurrentPosition()) / 2.0;
+
+                double currentY = (leftWheelInches+rightWheelInches)/2;
+                double deltaY1 = currentY-previousY;
+                //telemetry.addData("Delta y1", deltaY1);
+
+                double currentX = middleWheelInches-((method.getHeadingRaw()/360)*method.encCircX);
+                double deltaX1 = currentX-previousX;
+                //telemetry.addData("Delta x1", deltaX1);
+
+                double thetaX = 0;
+                double thetaY = Math.PI/2;
+
+                //changing from a [+] with | being y and -- being x to an [X] with \ being y and / being x (forward is forward)
+                //double rotatedTheta = theta + (Math.PI / 4);
+                double gyroAngle = method.getHeading() * (Math.PI / 180); //Converts gyroAngle into radians
+
+                double calculationAngleX =  thetaX-gyroAngle;
+                double calculationAngleY =  thetaY-gyroAngle;
+
+                double deltaY2 = Math.sin(calculationAngleY) * deltaY1;
+                if(Math.abs(Math.sin(calculationAngleX) * deltaX1)>Math.abs(Math.sin(calculationAngleY) * deltaY1)){
+                    deltaY2 = Math.sin(calculationAngleX) * deltaX1;
+                }
+                if(((Math.sin(calculationAngleY) * deltaY1)>0&&(Math.sin(calculationAngleX) * deltaX1)<0)||((Math.sin(calculationAngleY) * deltaY1)<0&&(Math.sin(calculationAngleX) * deltaX1)>0)) {
+                    deltaY2 = (Math.sin(calculationAngleY) * deltaY1) + (Math.sin(calculationAngleX) * deltaX1);
+                }
+                double deltaX2 = Math.cos(calculationAngleX) * deltaX1;
+                if(Math.abs(Math.cos(calculationAngleY) * deltaY1)>Math.abs(Math.cos(calculationAngleX) * deltaX1)){
+                    deltaX2 = Math.cos(calculationAngleY) * deltaY1;
+                }
+                if((((Math.cos(calculationAngleY) * deltaY1)>0)&&(Math.cos(calculationAngleX) * deltaX1)<0)||(((Math.cos(calculationAngleY) * deltaY1)<0)&&((Math.cos(calculationAngleX) * deltaX1)>0))) {
+                    deltaX2 = Math.cos(calculationAngleY) * deltaY1 + Math.cos(calculationAngleX) * deltaX1;
+                }
+
+                if(true) {
+                    method.currentYPosition += deltaY2;
+
+                    if(method.currentYPosition<9){
+                        method.currentYPosition = 9;
+                    }
+
+                    else if (method.currentYPosition>132.5){
+                        method.currentYPosition = 132.5;
+                    }
+
+                    method.currentXPosition += deltaX2;
+
+                    if(method.currentXPosition<9){
+                        method.currentXPosition = 9;
+                    }
+
+                    else if (method.currentXPosition>132.5){
+                        method.currentXPosition = 132.5;
+                    }
+                    previousX = currentX;
+                    previousY = currentY;
+//                    telemetry.addData("position", "[" +(int)method.currentXPosition + ", " + (int)method.currentYPosition + "]");
+//                    telemetry.addData("calcAnglex", calculationAngleX*(180/Math.PI));
+//                    telemetry.addData("calcAngley", calculationAngleY*(180/Math.PI));
+//                    telemetry.addData("current X", currentX);
+//                    telemetry.addData("current Y", currentY);
+//                    telemetry.update();
+                }
+                toAngle();
+            }
+        }
+    }
+    }

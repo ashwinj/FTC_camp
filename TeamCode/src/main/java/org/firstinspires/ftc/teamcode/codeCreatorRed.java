@@ -1,23 +1,30 @@
-//Double driver field centric for the blue alliance
+//Single driver field centric for the blur alliance
 
 package org.firstinspires.ftc.teamcode;
 
 //import com.acmerobotics.dashboard.FtcDashboard;
 //import com.acmerobotics.dashboard.config.Config;
+
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
-@TeleOp(name = "Double Driver red", group = "Taus")
-
+//@Disabled
+@TeleOp(name = "codeCreatorRed", group = "Taus")
 //@Config
-//hi
-public class TeleopBlue extends LinearOpMode {
+
+public class codeCreatorRed extends LinearOpMode {
 
     public AutonomousMethods method = new AutonomousMethods();
     boolean isAPressed = false;
@@ -34,40 +41,46 @@ public class TeleopBlue extends LinearOpMode {
     boolean RingIn = false;
     boolean intakingRing = true;
     double rings = 0;
+    double anglingPow = 0;
     boolean shooting = false;
-    boolean middleGoal = false;
-
     boolean recording = false;
     boolean isLeftStick = false;
-    int numRings = 0;
-    int numRingsEnd = 0;
-    int wobbleGoals = 0;
-    int powerShots = 0;
-    int numRingsMid = 0;
-    int numRingsMidEnd = 0;
-    int addOns = 90;
-    double timeIntaking = 0;
-    double timeShooting = 0;
+	boolean r0 = true;
+	boolean r1 = true;
+	boolean r4 = true;
+	boolean middleGoal = false;
+    int a = 0;
+	String programname = "moving"+a;
 
     double multiplier = 1;
     double speedFactor = 1;
     double previousY = 0;
     double previousX = 0;
     double prevMagnitude = 0;
+    double calcTime;
+    double stoptime = 0;
     boolean firstShot = true;
     boolean intakingInitially;
     double scale = 1;
-    boolean intaking = true;
-    boolean back = false;
-    Thread angling = new Adjusting();
-    Thread pos = new Position();
-    LinkedHashMap<String, Integer> points= new LinkedHashMap<String, Integer>();
+    //double calcTime=0;
+    double currentTime=0;
     double leftWheelInches;
     double rightWheelInches;
     double middleWheelInches;
-    double anglingPow = 0;
-    boolean clicked = false;
-    boolean shootingTime = false;
+    LinkedHashMap<Double, Double> speedsBl= new LinkedHashMap<Double, Double>();
+    LinkedHashMap<Double, Double> speedsBr= new LinkedHashMap<Double, Double>();
+    LinkedHashMap<Double, Double> speedsFr= new LinkedHashMap<Double, Double>();
+    LinkedHashMap<Double, Double> speedsFl= new LinkedHashMap<Double, Double>();
+    LinkedHashMap<Double, Double> speedsFlywheel= new LinkedHashMap<Double, Double>();
+    LinkedHashMap<Double, Double> speedsIntake= new LinkedHashMap<Double, Double>();
+    LinkedHashMap<Double, Double> toAngle= new LinkedHashMap<Double, Double>();
+    ArrayList<Double> drop= new ArrayList<Double>();
+    ArrayList<Double> pickUp= new ArrayList<Double>();
+    ArrayList<Double> indexer= new ArrayList<Double>();
+    Thread rec = new RecordingThread();
+    Thread play = new PlaybackThread();
+    Thread angling = new Adjusting();
+    Thread pos = new Position();
 
     @Override
     //run file
@@ -78,9 +91,6 @@ public class TeleopBlue extends LinearOpMode {
 
         method.robot.shooter.setVelocityPIDFCoefficients(method.p,method.i,method.d,method.f);
         method.resetAngle = method.getHeading();
-        leftWheelInches = (method.robot.intake2.getCurrentPosition()/method.encoderCountsEnc)*Math.PI*method.wheelDiameterEnc;
-        rightWheelInches = (method.robot.encoders.getCurrentPosition()/method.encoderCountsEnc)*Math.PI*method.wheelDiameterEnc;
-        middleWheelInches = (method.robot.intake.getCurrentPosition()/method.encoderCountsEnc)*Math.PI*method.wheelDiameterEnc;
         while(!isStarted()) {
             telemetry.addData("system", method.robot.imu.getSystemStatus());
             telemetry.addData("status", method.robot.imu.getCalibrationStatus());
@@ -88,55 +98,81 @@ public class TeleopBlue extends LinearOpMode {
             telemetry.update();
         }
 
+        //File file = new File(method.captureDirectory, filename);
+
         waitForStart();
+
+        //rec.start();
         method.setShooterPower(method.shooterPower);
         method.controlIndexServo(1);
         method.controlBlocker(0);
         method.controlArmServo(0);//move arm up
         method.controlClawServo(.25);//open
 
+        if(r0){
+            a = 0;
+        }
+        else if(r1){
+            a = 1;
+        }
+        else if(r4){
+            a = 4;
+        }
+
         method.runtime2.reset();
         method.runtime3.reset();
-        method.shooting.reset();
-        method.intaking.reset();
         pos.start();
         while (opModeIsActive()) {
+            method.robot.shooter.setVelocityPIDFCoefficients(method.p,method.i,method.d,method.f);
             drive();
 
-            shooter();
+            shoot();
             intake();
             claw();
-            indexer();
-            //blocker();
-            startstop();
+            confirm();
+            playBack();
 
-            shoot();
+            //shoot();
             //updateShootingParameters();
-            //toAngle();
+            toAngle();
             powerShot();
+            startstop();
 
             //goToPosition();
             //updatePosition();
             resetAngle();
             ringIn();
 
-            telemetry.addData("angle", (int)method.getHeading());
-            telemetry.addData("target", (int)method.shooterRpm);
-            telemetry.addData("rpm", (int)(method.robot.shooter.getVelocity()/28.0)*60);
-            telemetry.addData("numRings", rings);
+            //telemetry.addData("angle", (int)method.getHeading());
+            //telemetry.addData("target", (int)method.shooterRpm);
+            //telemetry.addData("numRings", rings);
             //telemetry.addData("time", method.runtime3.seconds());
-            telemetry.addData("position", "[" +method.currentXPosition + ", " + method.currentYPosition + "]");
-
-
+            if (recording) {
+                telemetry.addData("recording", a);
+                telemetry.addData("time", currentTime);
+            }
+            else{
+                telemetry.addLine("not recording");
+                telemetry.addData("rings", a);
+                telemetry.addData("programname", programname);
+            }
             telemetry.update();
             telemetry.clear();
 
-        }
+            FtcDashboard dashboard = FtcDashboard.getInstance();
+            Telemetry dashboardTelemetry = dashboard.getTelemetry();
+            dashboardTelemetry.addData("rpm", (method.robot.shooter.getVelocity()/28.0)*60);
+            dashboardTelemetry.addData("target", method.shooterRpm);
+            dashboardTelemetry.addData("0", 0);
+            dashboardTelemetry.update();
 
-        method.setAllMotorsTo(0);
+        }
+        play.interrupt();
+        rec.interrupt();
         pos.interrupt();
         angling.interrupt();
 
+        method.setAllMotorsTo(0);
         method.setShooterPower(0);
         method.setIntakePower(0);
     }
@@ -163,24 +199,6 @@ public class TeleopBlue extends LinearOpMode {
 
         if(Math.abs(gamepad1.right_stick_x)>.05) {
             rotationValue = gamepad1.right_stick_x;
-            anglingPow = 0;
-            angling.interrupt();
-            shooting = false;
-        }
-        else if(gamepad1.right_trigger>.1){
-            rotationValue = .2;
-            anglingPow = 0;
-            angling.interrupt();
-            shooting = false;
-        }
-        else if(gamepad1.left_trigger>.1){
-            rotationValue = -.2;
-            anglingPow = 0;
-            angling.interrupt();
-            shooting = false;
-        }
-        else if (shooting&& Math.abs(method.getHeading()-method.shootingAngle)>1){
-            rotationValue=anglingPow;
         }
         else{
             rotationValue=0;
@@ -233,16 +251,16 @@ public class TeleopBlue extends LinearOpMode {
 
 //        multiplier = method.errorToPower(method.runtime2.seconds(), scale, 0, 1, 0);
 
-        method.robot.frontLeftMotor.setPower((((xComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);//x
+        method.robot.frontLeftMotor.setPower((((xComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);
         method.robot.backRightMotor.setPower((((xComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);//x
         method.robot.backLeftMotor.setPower((((yComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);//y
-        method.robot.frontRightMotor.setPower((((yComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);//y
+        method.robot.frontRightMotor.setPower((((yComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);
 
     }
 
     //shooting
     public void shooter(){
-        if(gamepad2.x && !isXPressed){
+        if(gamepad1.x && !isXPressed){
             isXPressed = true;
             if (!shooterOn) {
                 method.setShooterPower(method.shooterPower);
@@ -253,14 +271,14 @@ public class TeleopBlue extends LinearOpMode {
                 shooterOn = false;
             }
         }
-        if(gamepad1.dpad_up && !dpadPressed){
-            method.shooterRpm +=10;
+        /*if(gamepad1.dpad_up && !dpadPressed){
+            method.shooterRpm +=50;
             method.shooterPower = (method.shooterRpm*28)/60.0;
             method.setShooterPower(method.shooterPower);
             dpadPressed=true;
         }
         else if(gamepad1.dpad_down && !dpadPressed){
-            method.shooterRpm-=10;
+            method.shooterRpm-=50;
             method.shooterPower = (method.shooterRpm*28)/60.0;
             method.setShooterPower(method.shooterPower);
             dpadPressed=true;
@@ -270,39 +288,39 @@ public class TeleopBlue extends LinearOpMode {
             method.shooterPower = (method.shooterRpm*28)/60.0;
             method.setShooterPower(method.shooterPower);
             dpadPressed=true;
-        }
+        }*/
 
         if(!gamepad2.x){
             isXPressed = false;
         }
-        if(!gamepad1.dpad_up && !gamepad2.dpad_down && !gamepad2.dpad_right){
-            dpadPressed = false;
-        }
+        //if(!gamepad1.dpad_up && !gamepad2.dpad_down && !gamepad2.dpad_right){
+        //    dpadPressed = false;
+        //}
     }
     public void toAngle(){
         if(gamepad2.left_bumper){
-            method.currentXPosition = 12;
+            method.currentXPosition = 84;
             method.currentYPosition = 72;
             updateShootingParameters();
             shooting = true;
             middleGoal = false;
         }
         if(gamepad2.dpad_down){
-            method.currentXPosition = 36;
+            method.currentXPosition = 108;
             method.currentYPosition = 72;
             updateShootingParameters();
             shooting = true;
             middleGoal = false;
         }
         if(gamepad2.right_bumper){
-            method.currentXPosition = 60;
+            method.currentXPosition = 132;
             method.currentYPosition = 72;
             updateShootingParameters();
             shooting = true;
             middleGoal = false;
         }
         if(gamepad2.right_trigger>.1){
-            method.currentXPosition = 36;
+            method.currentXPosition = 108;
             method.currentYPosition = 72;
             method.updateShootingParameters4();
             shooting = true;
@@ -311,9 +329,6 @@ public class TeleopBlue extends LinearOpMode {
         if(gamepad1.left_bumper){
             updateShootingParameters();
             shooting=true;
-        }
-        if(gamepad1.b){
-            middleGoal = true;
         }
 
         if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)&&!(gamepad1.right_trigger>.1)&&!(gamepad1.left_trigger>.1)){
@@ -331,126 +346,70 @@ public class TeleopBlue extends LinearOpMode {
             }
         }
     }
-    public void powerShot(){
-        if(gamepad2.left_trigger>.1) {
-            telemetry.addLine(method.magic8());
-            telemetry.update();
-            method.powerShot(-15, -11, -6, method.powerShotPower, method.shooterPower);
-            rings=0;
-            powerShots=3;
+    public void updateShootingParameters(){
+        if (middleGoal){
+            method.updateShootingParameters4();
         }
+        else {
+            method.updateShootingParameters2();
+        }
+
+    }
+    public void powerShot(){
         if(gamepad2.dpad_left){
+            method.setShooterPower(method.powerShotPower);
+            method.toAngle(-19, .5);
+            method.shootRings(1);
+            method.setShooterPower(method.shooterPower);
+        }
+        if(gamepad2.dpad_up){
             method.setShooterPower(method.powerShotPower);
             method.toAngle(-15, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
-            if (rings>0) {
-                rings -= 1;
-            }
         }
-        if(gamepad2.dpad_up){
+        if(gamepad2.dpad_right){
             method.setShooterPower(method.powerShotPower);
             method.toAngle(-11, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
-            if (rings>0) {
-                rings -= 1;
-            }
         }
-        if(gamepad2.dpad_right){
-            method.setShooterPower(method.powerShotPower);
-            method.toAngle(-16, .5);
-            method.shootRings(1);
-            method.setShooterPower(method.shooterPower);
-            if (rings>0) {
-                rings -= 1;
-            }
-        }
-    }
-    public void shoot(){
-        if(gamepad1.x) {
-            method.setAllMotorsTo(0);
-            method.shootRings(3);
-            if (recording) {
-                if(method.runtime3.seconds()<90) {
-                    if(method.shooterRpm==1850){
-                        numRingsMid+=rings;
-                    }
-                    else {
-                        numRings += rings;
-                    }
-                }
-                else{
-                    if(method.shooterRpm==1850){
-                        numRingsMidEnd+=rings;
-                    }
-                    else {
-                        numRingsEnd += rings;
-                    }
-                }
-            }
-            rings=0;
-        }
-    }
-    public void updateShootingParameters(){
-        if (middleGoal){
-            method.updateShootingParameters3();
-        }
-        else {
-            method.updateShootingParameters();
-        }
-
     }
 
     //subsystems and utilities
-    public void indexer(){
-        if(gamepad2.a && !isAPressed){
+    public void confirm(){
+        if(gamepad1.a && !isAPressed) {
             isAPressed = true;
-            method.shootRings(1);
-            if (rings>0) {
-                rings -= 1;
-                if (recording) {
-                    if(method.runtime3.seconds()<90) {
-                        if(method.shooterRpm==1850){
-                            numRingsMid+=1;
-                        }
-                        else {
-                            numRings += 1;
-                        }
+            if (!recording) {
+                if (a == 0) {
+                    if (r1) {
+                        a = 1;
                     }
-                    else{
-                        if(method.shooterRpm==1850){
-                            numRingsMidEnd+=1;
-                        }
-                        else {
-                            numRingsEnd += 1;
-                        }
+                    else if (r4) {
+                        a = 4;
                     }
                 }
+                else if (a == 1) {
+                    if (r4) {
+                        a = 4;
+                    }
+                    else if (r0) {
+                        a = 0;
+                    }
+                }
+                else if (a == 4) {
+                    if (r0) {
+                        a = 0;
+                    }
+                    else if (r1) {
+                        a = 1;
+                    }
+                }
+                programname = programname.substring(0, programname.length()-1)+a;
             }
         }
-        if(!gamepad2.a){
+        if(!gamepad1.a){
             isAPressed = false;
-        }
-    }
-    public void blocker(){
-        if(gamepad2.y && !isYPressed){
-            isYPressed = true;
-            if (isBlockerDown) {
-                method.controlBlocker(0);
-                isBlockerDown = false;
-            }
-            else{
-                method.controlBlocker(1);
-                isBlockerDown = true;
-            }
-        }
-        if(!gamepad2.y){
-            isYPressed = false;
-        }
-        if(method.runtime3.seconds()>90&&method.runtime3.seconds()<93){
-            method.controlBlocker(1);
-            isBlockerDown = true;
         }
     }
     public void intake(){
@@ -488,9 +447,6 @@ public class TeleopBlue extends LinearOpMode {
                 method.controlArmServo(1);//moving arm down
                 isRunning = true;
                 method.runtime.reset();
-                if (method.runtime3.seconds()>95&wobbleGoals<2){
-                    wobbleGoals++;
-                }
             }
         }
         if(!gamepad2.b){
@@ -528,29 +484,7 @@ public class TeleopBlue extends LinearOpMode {
                 rings--;
             }
         }
-        if(rings<3&&method.runtime3.seconds()<90 && recording){
-            if(shootingTime){
-                shootingTime = false;
-                method.intaking.reset();
-            }
-            timeIntaking+=method.intaking.seconds();
-            method.intaking.reset();
-            if(!intaking){
-                intaking=true;
-            }
 
-        }
-        if(rings>2&&method.runtime3.seconds()<90 && recording){
-            if(!shootingTime){
-                shootingTime = true;
-                method.shooting.reset();
-            }
-            timeShooting+=method.shooting.seconds();
-            method.shooting.reset();
-            if(intaking){
-                intaking=false;
-            }
-        }
     }
     public void resetAngle() {
         if (gamepad1.right_bumper) {
@@ -561,139 +495,160 @@ public class TeleopBlue extends LinearOpMode {
         }
     }
     public void startstop(){
-        if (gamepad1.back && !back){
+        if (gamepad1.left_stick_button & !isLeftStick){
             recording = !recording;
             if(recording){
-                method.runtime3.reset();
-                method.intaking.reset();
-                method.shooting.reset();
-                numRings = 0;
-                numRingsEnd = 0;
-                wobbleGoals = 0;
-                powerShots = 0;
-                numRingsMid = 0;
-                numRingsMidEnd = 0;
-                addOns=90;
-                timeIntaking = 0;
-                timeShooting = 0;
-                intaking = true;
+                speedsFl.clear();
+                speedsBl.clear();
+                speedsFr.clear();
+                speedsBr.clear();
+                drop.clear();
+                pickUp.clear();
+                indexer.clear();
+                speedsFlywheel.clear();
+                speedsIntake.clear();
+                rec.start();
             }
             else{
-                points.put("rings high", numRings);
-                points.put("rings mid", numRingsMid);
-                points.put("endgame rings high", numRingsEnd);
-                points.put("endgame rings mid", numRingsMidEnd);
-                points.put("power shots", powerShots);
-                points.put("wobble goals", wobbleGoals);
-                points.put("addOns", addOns);
-                int index = 0;
-                String current= "";
-                while(!(gamepad1.right_trigger>.1)){
-                    int finder = 0;
-                    for (String i: points.keySet()){
-                        if (index == finder){
-                            current = i;
-                        }
-                        finder++;
-                    }
-                    points=numPicker(current, points, index);
-                    if (method.down) {
-                        index++;
-                        if(index>points.size()-1){
-                            index = 0;
-                        }
-                    }
-                    else{
-                        index--;
-                        if (index<0) {
-                            index = points.size()-1;
-                        }
+                rec.interrupt();
+                String filename = programname;
+                File file = AppUtil.getInstance().getSettingsFile(filename);
+                String k = speedsBl.toString() + "\n";
+                k+=speedsBr.toString() + "\n";
+                k+=speedsFl.toString() + "\n";
+                k+=speedsFr.toString() + "\n";
+                k+=speedsIntake.toString() + "\n";
+                k+=speedsFlywheel.toString() + "\n";
+                k+=drop.toString() + "\n";
+                k+=pickUp.toString() + "\n";
+                k+=indexer.toString() + "\n";
+                k+=toAngle.toString() + "\n";
+                k+=stoptime + "\n";
+                ReadWriteFile.writeFile(file, k);
+            }
+            method.runtime3.reset();
+            isLeftStick = true;
+        }
+        else if (!gamepad1.left_stick_button){
+            isLeftStick=false;
+        }
+    }
+    public static double round(double value, int places) {
+        return Math.round(value*Math.pow(10.0, places))/Math.pow(10.0, places);
+    }
+
+    public void playBack(){
+        if (gamepad1.back){
+            method.runtime3.reset();
+            method.controlIndexServo(1);
+
+            //pick up wobble goal
+            method.controlClawServo(.25);
+            method.controlArmServo(.25);
+            LinkedHashMap<Double, Double> toAnglet= new LinkedHashMap<Double, Double>();
+            ArrayList<Double> dropt= drop;
+            ArrayList<Double> pickUpt= pickUp;
+            ArrayList<Double> indexert= indexer;
+            currentTime = method.runtime3.seconds();
+            play.start();
+            while (stoptime>currentTime){
+                currentTime = method.runtime3.seconds();
+                double closest = Double.MAX_VALUE;
+                for (double i : speedsBl.keySet()){
+                    if (Math.abs(currentTime-i)<Math.abs(currentTime-closest)){
+                        closest = i;
                     }
                 }
-                String summary="Game Summary:\n";
-                numRings = points.get("rings high");
-                numRingsMid = points.get("rings mid");
-                numRingsEnd = points.get("endgame rings high");
-                numRingsMidEnd = points.get("endgame rings mid");
-                powerShots = points.get("power shots");
-                wobbleGoals = points.get("wobble goals");
-                addOns = points.get("addOns");
-                int pointsRings=numRings*6;
-                int pointsRingsMid=numRingsMid*4;
-                int cycles = (numRings+numRingsMid)/3;
-                int pointsWobble=wobbleGoals*20;
-                int pointsPower=powerShots*15;
-                int pointsRingsEnd=numRingsEnd*6;
-                int pointsRingsEndMid=numRingsMidEnd*4;
-                int cycleTime = (90/cycles);
-                if(method.runtime3.seconds()<90){
-                    cycleTime = (int)(method.runtime3.seconds()/cycles);
-                }
-                int total = pointsRings+pointsRingsEnd+pointsRingsMid+pointsRingsEndMid+pointsWobble+pointsPower;
-                double intakingTime = (int)method.intaking.seconds();
-                double shootingTime = (int)method.shooting.seconds();
-                double intakingTimePerCycle = (int)(intakingTime/cycles);
-                double shootingTimePerCycle = (int)(shootingTime/cycles);
-                summary+="Teleop:\n";
-                summary+=numRings + " rings in high (" + pointsRings + " pts)\n";
-                summary+=numRingsMid + " rings in mid (" + pointsRingsMid + " pts)\n";
-                summary+=cycles + " cycles\n";
-                summary+="cycle time of " + cycleTime + " s/cycle\n";
-                summary+=shootingTime + " shooting (" + shootingTimePerCycle + "s/cycle)\n";
-                summary+=intakingTime + " intaking (" + intakingTimePerCycle + "s/cycle)\n";
-                summary+="Endgame:\n";
-                summary+=numRingsEnd + " endgame rings in high(" + pointsRingsEnd + " pts)\n";
-                summary+=numRingsMidEnd + " endgame rings in mid(" + pointsRingsEndMid + " pts)\n";
-                summary+= wobbleGoals + "/2 wobble goals (" + pointsWobble + " pts)\n";
-                summary+= powerShots + "/3 powershots (" + pointsPower + " pts)\n\n";
-                summary+= "total: " + total + "\n";
-                summary+= "total+: " + (total+addOns) + "\n";
-                telemetry.addLine(summary);
+                calcTime = closest;
+                telemetry.addData("playback", currentTime);
+                telemetry.addData("time", currentTime);
                 telemetry.update();
-                sleep(1000);
-                while (!(gamepad1.right_trigger>.1)){
-                    idle();
+                if (indexert.size()>0) {
+                    if (indexert.get(0) <= currentTime) {
+                        method.shootRings(3);
+                        indexert.remove(0);
+                    }
+                }
+                if (pickUpt.size()>0) {
+                    if (pickUpt.get(0) <= currentTime) {
+                        method.pickUpClaw(0);
+                        pickUpt.remove(0);
+                    }
+                }
+                if(dropt.size()>0) {
+                    if (dropt.get(0) <= currentTime) {
+                        method.dropClaw();
+                        dropt.remove(0);
+                    }
+                }
+                if(toAnglet.size()>0) {
+                    for (double t :toAnglet.keySet())
+                        if (t <= currentTime) {
+                            method.toAngle(toAnglet.get(t), 1);
+                            toAnglet.remove(t);
+                        }
                 }
 
             }
-            back = true;
+            method.setAllMotorsTo(0);
+            method.runtime3.reset();
+            play.interrupt();
+
         }
-        else if (!gamepad1.back){
-            back = false;
-        }
-    }
-    public LinkedHashMap numPicker(String key, LinkedHashMap points, int index){
-        LinkedHashMap<String, Integer> newPoints = points;
-        while(!(gamepad1.right_trigger>.1)) {
-            if (gamepad1.dpad_right&!clicked) {
-                newPoints.put(key, newPoints.get(key)+1);
-                clicked = true;
-            }
-            else if (gamepad1.dpad_left&!clicked) {
-                newPoints.put(key, newPoints.get(key)-1);
-                clicked = true;
-            }
-            else if (gamepad1.dpad_up&!clicked) {
-                method.down=false;
-                clicked = true;
-                return newPoints;
-            }
-            else if (gamepad1.dpad_down&!clicked) {
-                method.down=true;
-                clicked=true;
-                return newPoints;
-            }
-            else if (!gamepad1.dpad_right&&!gamepad1.dpad_left&&!gamepad1.dpad_down&&!gamepad1.dpad_up){
-                clicked=false;
-            }
-            String line = method.hashToString(points, index);
-            telemetry.addLine(line);
-            telemetry.update();
-        }
-        return newPoints;
     }
 
-    //threads
+    //not in use
+    public void shoot(){
+        if(gamepad1.x) {
+            indexer.add(method.runtime3.seconds());
+            method.shootRings(3);
+            rings=0;
+        }
+    }
+    private class RecordingThread extends Thread {
+        public RecordingThread(){
+            this.setName("RecordingThread");
+        }
+        @Override
+        public void run() {
+            //telemetry.addData("notRecording", calcTime);
+            //telemetry.log().add("running");
+            while (!isInterrupted()) {
+                currentTime = method.runtime3.seconds();
+                if (recording) {
+                    //telemetry.addData("recording", calcTime);
+                    speedsBl.put(currentTime, method.robot.backLeftMotor.getVelocity());
+                    speedsFl.put(currentTime, method.robot.frontLeftMotor.getVelocity());
+                    speedsBr.put(currentTime, method.robot.backRightMotor.getVelocity());
+                    speedsFr.put(currentTime, method.robot.frontRightMotor.getVelocity());
+                    speedsIntake.put(currentTime, method.robot.intake.getPower());
+                    speedsFlywheel.put(currentTime, method.robot.shooter.getVelocity());
+                    stoptime = currentTime;
+                }
+            }
+        }
+    }
+    private class PlaybackThread extends Thread {
+        public PlaybackThread(){
+            this.setName("PlaybackThread");
+        }
+        @Override
+        public void run() {
+            //telemetry.addData("notRecording", calcTime);
+            //telemetry.log().add("running");
+            while (!isInterrupted()) {
+                currentTime = method.runtime3.seconds();
+                //telemetry.addData("recording", calcTime);
+                method.robot.backLeftMotor.setVelocity(speedsBl.get(calcTime));
+                method.robot.frontRightMotor.setVelocity(speedsFr.get(calcTime));
+                method.robot.frontLeftMotor.setVelocity(speedsFl.get(calcTime));
+                method.robot.backRightMotor.setVelocity(speedsBr.get(calcTime));
+                method.robot.intake.setPower(speedsIntake.get(calcTime));
+                method.robot.intake2.setPower(-speedsIntake.get(calcTime));
+                method.robot.shooter.setVelocity(speedsFlywheel.get(calcTime));
+                }
+            }
+        }
     private class Adjusting extends Thread {
         public Adjusting(){
             this.setName("Adjusting");
@@ -790,4 +745,4 @@ public class TeleopBlue extends LinearOpMode {
             }
         }
     }
-}
+    }

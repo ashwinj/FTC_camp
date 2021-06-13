@@ -59,8 +59,8 @@ public class TeleopRed extends LinearOpMode {
     double scale = 1;
     boolean intaking = true;
     boolean back = false;
-    Thread angling = new TeleopRed.Adjusting();
-    Thread pos = new TeleopRed.Position();
+    Thread angling = new Adjusting();
+    Thread pos = new Position();
     LinkedHashMap<String, Integer> points= new LinkedHashMap<String, Integer>();
     double leftWheelInches;
     double rightWheelInches;
@@ -133,10 +133,10 @@ public class TeleopRed extends LinearOpMode {
 
         }
 
-        method.setAllMotorsTo(0);
         pos.interrupt();
         angling.interrupt();
 
+        method.setAllMotorsTo(0);
         method.setShooterPower(0);
         method.setIntakePower(0);
     }
@@ -311,6 +311,9 @@ public class TeleopRed extends LinearOpMode {
         if(gamepad1.left_bumper){
             updateShootingParameters();
             shooting=true;
+        }
+        if(gamepad1.b){
+            middleGoal = true;
         }
 
         if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)&&!(gamepad1.right_trigger>.1)&&!(gamepad1.left_trigger>.1)){

@@ -871,7 +871,7 @@ public class AutonomousMethods extends LinearOpMode {
         LinkedHashMap<Double, Double> convert = new LinkedHashMap<Double, Double>();
 
         //split the String by a comma
-        String parts[] = s.split(",");
+        String parts[] = s.split(", |=|\\{|\\}");
 
         //iterate the parts and add them to a map
         for (String part : parts) {
@@ -892,7 +892,7 @@ public class AutonomousMethods extends LinearOpMode {
         //new HashMap object
         ArrayList<Double> convert = new ArrayList<Double>();
         //split the String by a comma
-        String parts[] = s.split(",", '{');
+        String parts[] = s.split(", |\\]|\\[");
         //iterate the parts and add them to a map
         for (String part : parts) {
             Double timeStamp = Double.parseDouble(part.trim());
@@ -1066,9 +1066,9 @@ public class AutonomousMethods extends LinearOpMode {
         //2280
         //2380
         //2435
-        double curveAngle = (startingAngle+incrementAngle*(84-(currentYPosition+9)));
+        double curveAngle = (startingAngle+incrementAngle*(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((36-currentXPosition),2))-60));
         shootingAngle = Math.toDegrees(Math.atan((36-currentXPosition)/(144-(currentYPosition+9))))+curveAngle;//-35 44.1
-        shooterRpm = (staticShooterRpm+incrementRpm*Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((36-currentXPosition),2)));
+        shooterRpm = (staticShooterRpm+incrementRpm*(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((36-currentXPosition),2))-60));
         shooterPower = (shooterRpm*28)/60.0;
         setShooterPower(shooterPower);
     }
@@ -1080,14 +1080,14 @@ public class AutonomousMethods extends LinearOpMode {
         setShooterPower(shooterPower);
     }
     public void updateShootingParameters3(){
-        double curveAngle = (startingAngle+incrementAngle*(84-(currentYPosition+9)));
-        shootingAngle = Math.toDegrees(Math.atan((36-currentXPosition)/(144-(currentYPosition+9))))+curveAngle;
-        shooterRpm = (staticShooterRpm2*Math.pow(incrementRpm2,(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((108-currentXPosition),2)))));
+        double curveAngle = (startingAngle+incrementAngle*(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((36-currentXPosition),2))-60));
+        shootingAngle = Math.toDegrees(Math.atan((36-currentXPosition)/(144-(currentYPosition+9))))+curveAngle;//-35 44.1
+        shooterRpm = (staticShooterRpm2*Math.pow(incrementRpm2,(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((36-currentXPosition),2)))));
         shooterPower = (shooterRpm*28)/60.0;
         setShooterPower(shooterPower);
     }
     public void updateShootingParameters4(){
-        double curveAngle = (startingAngle+incrementAngle*(84-(currentYPosition+9)));
+        double curveAngle = (startingAngle+incrementAngle*(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((108-currentXPosition),2))-60));
         shootingAngle = Math.toDegrees(Math.atan((108-currentXPosition)/(144-(currentYPosition+9))))+curveAngle;
         shooterRpm = (staticShooterRpm2*Math.pow(incrementRpm2,(Math.sqrt(Math.pow((144-(currentYPosition+9)),2)+Math.pow((108-currentXPosition),2)))));
         shooterPower = (shooterRpm*28)/60.0;
@@ -1100,7 +1100,6 @@ public class AutonomousMethods extends LinearOpMode {
 //        shooterPower = (shooterRpm*28)/60.0;
 //        setShooterPower(shooterPower);
 //    }
-
 
     //Vision
     public void savePic(){
