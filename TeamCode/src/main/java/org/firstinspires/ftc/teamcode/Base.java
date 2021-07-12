@@ -21,8 +21,8 @@ public class Base extends AutonomousMethods {
 
 
         stopAndResetEncoders();
-        controlIndexServo(1);
-        controlBlocker(.375);
+        //controlIndexServo(1);
+        //controlBlocker(.375);
 
         //pick up wobble goal
         controlClawServo(.25);//close

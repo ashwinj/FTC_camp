@@ -3,8 +3,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
-//@Disabled
+@Disabled
 @Autonomous(name = "BlueRight2", group = "Taus")
 public class BlueRight2 extends AutonomousMethods {
 
@@ -69,25 +70,26 @@ public class BlueRight2 extends AutonomousMethods {
             case 4:
                 //code
                 forward(.5, 1, 15);
-                shoot(-26, (2285*28)/60.0);
-                toAngle(-90, 1);
+                shoot(-23, (2272.5*28)/60.0);
+                toAngle(90, 1);
                 setIntakePower(1);
-                backward(1, 0, 6, 6, 2, 6);
-                forward(1, 0, 6);
-                shoot(-26, (2285*28)/60.0);
-                toAngle(-90, 1);
+                backward(1, 0, 7, 6, 2, 0);
+                forward(1, 0, 7);
+                shoot(-24, (2272.5*28)/60.0);
+                toAngle(90, 1);
                 setIntakePower(1);
-                backward(.3, 0, 23);
-                forward(.3, 0, 23);
+                backward(.3, 0, 8);
+                backward(.05, 0, 10);
+                forward(.5, 0, 18);
                 toAngle(0, 1);
-                forward(.5, 0, 20);
-                shoot(-26, (2150*28)/60.0);
+                forward(.5, 0, 18);
+                shoot(-28, (2195*28)/60.0);
                 toAngle(0, 1);
                 forward(.5, 2, 10);
                 strafeLeft(.5, 0, 23);
-                toAngle(45, 1);
+                //toAngle(45, 1);
                 dropWobbleGoal();
-                strafeRight(.5, 1, 23);
+                //strafeRight(.5, 1, 23);
                 toAngle(0, 1);
                 backward(.5, 0, 12);
                 break;

@@ -4,9 +4,10 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 @Disabled
-@Autonomous(name = "RedRight", group = "Taus")
-public class RedRight extends AutonomousMethods {
+@Autonomous(name = "RedRightS", group = "Taus")
+public class RedRightS extends AutonomousMethods {
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -35,7 +36,7 @@ public class RedRight extends AutonomousMethods {
             case 0:
                 //code
                 forward(.5, 2, 10);
-                shoot(-28.0, (2195*28)/60.0);
+                shoot(-25.0, (2135*28)/60.0);
                 toAngle(145, 1);
                 dropWobbleGoal();
                 strafeRight(.5, 0, 3);
@@ -45,56 +46,28 @@ public class RedRight extends AutonomousMethods {
             case 1:
                 //code
                 forward(.5, 2, 10);//16
-                shoot(-28.0, (2195*28)/60.0);
+                shoot(-25.0, (2135*28)/60.0);
                 toAngle(0, 1);
-                forward(.5, 1, 26);//21
+                forward(.5, 1, 27);//21
                 toAngle(-15,1);
                 dropWobbleGoal();
                 toAngle(0,1);
                 strafeRight(.5, 0, 3);
-                backward(.5, 2, 21);
-                toAngle(90, 1);
-                setIntakePower(1);
-                backward(.5, 0, 12);
-                forward(.5, 0, 12);
-                toAngle(0, 1);
-                forward(.5, 0, 20);
-                shoot(-30.0, (2195*28)/60.0);
-                toAngle(0, 1);
-                forward(.5, 0, 12);
+                backward(.5, 1, 12);
                 break;
             case 4:
                 //code
                 forward(.5, 2, 10);//16
-                shoot(-25.0, (2195*28)/60.0);
+                shoot(-25.0, (2135*28)/60.0);
                 toAngle(0, 1);
                 forward(.5, 1, 24);//18
                 toAngle(145, 1);
                 dropWobbleGoal();
                 strafeRight(.5, 0, 3);
                 toAngle(180, 1);
-                forward(.5, 2, 17);
+                forward(.5, 1, 20);
                 strafeLeft(.5, 0, 6);
-                toAngle(90, 1);
-                setIntakePower(1);
-                backward(.5, 0, 8);
-                forward(.5, 0, 1);
-                backward(.5, 0, 2);
-                forward(.5, 0, 1);
-                backward(.5, 0, 2);
-                forward(.5, 0, 6);
-                shoot(-25.0, (2360.9*28)/60.0);
-                toAngle(90, 1);
-                setIntakePower(1);
-                backward(.5, 0, 10);
-                forward(.5, 0, 10);
-                forward(.5, 0, 2);
-                backward(.5, 0, 1);
                 toAngle(0, 1);
-                backward(.5, 1, 0);
-                shoot(-25.0, (2195*28)/60.0);
-                toAngle(0, 1);
-                forward(.5, 0, 12);
                 break;
         }
 

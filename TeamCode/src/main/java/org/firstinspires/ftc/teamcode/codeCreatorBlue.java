@@ -6,6 +6,7 @@ package org.firstinspires.ftc.teamcode;
 //import com.acmerobotics.dashboard.config.Config;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -19,7 +20,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
-//@Disabled
+@Disabled
 @TeleOp(name = "codeCreatorBlue", group = "Taus")
 //@Config
 
@@ -45,11 +46,11 @@ public class codeCreatorBlue extends LinearOpMode {
     boolean recording = false;
     boolean isLeftStick = false;
 	boolean r0 = true;
-	boolean r1 = true;
-	boolean r4 = true;
+	boolean r1 = false;
+	boolean r4 = false;
 	boolean middleGoal = false;
     int a = 0;
-	String programname = "moving"+a;
+	String programname = "" + a;
 
     double multiplier = 1;
     double speedFactor = 1;
@@ -133,7 +134,7 @@ public class codeCreatorBlue extends LinearOpMode {
 
             //shoot();
             //updateShootingParameters();
-            toAngle();
+            //toAngle();
             powerShot();
             startstop();
 
@@ -347,7 +348,9 @@ public class codeCreatorBlue extends LinearOpMode {
             updateShootingParameters();
             shooting=true;
         }
-
+        if(gamepad1.b){
+            middleGoal = !middleGoal;
+        }
         if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)&&!(gamepad1.right_trigger>.1)&&!(gamepad1.left_trigger>.1)){
             if(!angling.isAlive()) {
                 angling.start();
@@ -444,7 +447,7 @@ public class codeCreatorBlue extends LinearOpMode {
         else if(Math.abs(gamepad2.left_stick_y)>.05&&rings>2){
             method.setIntakePower(1*-gamepad2.left_stick_y);
         }
-        else if(gamepad1.left_stick_button){
+        else if(gamepad1.a){
             method.setIntakePower(1);
         }
         else{
@@ -452,21 +455,23 @@ public class codeCreatorBlue extends LinearOpMode {
         }
     }
     public void claw(){
-        if((gamepad2.b && !isBPressed)){//||(method.runtime3.seconds()>87&&method.runtime3.seconds()<90)
+        if(((gamepad2.b||gamepad1.b) && !isBPressed)){//||(method.runtime3.seconds()>87&&method.runtime3.seconds()<90)
             isBPressed = true;
             if (!clawClosed) {
+                pickUp.add(method.runtime3.seconds());
                 method.controlClawServo(.25);//closing claw
                 isRunning = true;
                 method.runtime.reset();
 
             }
             else{
+                drop.add(method.runtime3.seconds());
                 method.controlArmServo(1);//moving arm down
                 isRunning = true;
                 method.runtime.reset();
             }
         }
-        if(!gamepad2.b){
+        if(!gamepad2.b&&gamepad1.b){
             isBPressed = false;
         }
         if (isRunning){
@@ -540,7 +545,7 @@ public class codeCreatorBlue extends LinearOpMode {
                 k+=pickUp.toString() + "\n";
                 k+=indexer.toString() + "\n";
                 k+=toAngle.toString() + "\n";
-                k+=stoptime + "\n";
+                k+=stoptime;
                 ReadWriteFile.writeFile(file, k);
             }
             method.runtime3.reset();
@@ -569,14 +574,6 @@ public class codeCreatorBlue extends LinearOpMode {
             currentTime = method.runtime3.seconds();
             play.start();
             while (stoptime>currentTime){
-                currentTime = method.runtime3.seconds();
-                double closest = Double.MAX_VALUE;
-                for (double i : speedsBl.keySet()){
-                    if (Math.abs(currentTime-i)<Math.abs(currentTime-closest)){
-                        closest = i;
-                    }
-                }
-                calcTime = closest;
                 telemetry.addData("playback", currentTime);
                 telemetry.addData("time", currentTime);
                 telemetry.update();
@@ -655,6 +652,13 @@ public class codeCreatorBlue extends LinearOpMode {
             //telemetry.log().add("running");
             while (!isInterrupted()) {
                 currentTime = method.runtime3.seconds();
+                double closest = Double.MAX_VALUE;
+                for (double i : speedsBl.keySet()){
+                    if (Math.abs(currentTime-i)<Math.abs(currentTime-closest)){
+                        closest = i;
+                    }
+                }
+                calcTime = closest;
                 //telemetry.addData("recording", calcTime);
                 method.robot.backLeftMotor.setVelocity(speedsBl.get(calcTime));
                 method.robot.frontRightMotor.setVelocity(speedsFr.get(calcTime));
@@ -663,9 +667,9 @@ public class codeCreatorBlue extends LinearOpMode {
                 method.robot.intake.setPower(speedsIntake.get(calcTime));
                 method.robot.intake2.setPower(-speedsIntake.get(calcTime));
                 method.robot.shooter.setVelocity(speedsFlywheel.get(calcTime));
-                }
             }
         }
+    }
     private class Adjusting extends Thread {
         public Adjusting(){
             this.setName("Adjusting");
@@ -673,7 +677,12 @@ public class codeCreatorBlue extends LinearOpMode {
         @Override
         public void run() {
             while(!isInterrupted()) {
-                method.updateShootingParameters4();
+                if (middleGoal) {
+                    method.updateShootingParameters3();
+                }
+                else{
+                    method.updateShootingParameters();
+                }
 
                 anglingPow = method.toAngle2(method.shootingAngle, 1);
             }
@@ -700,7 +709,7 @@ public class codeCreatorBlue extends LinearOpMode {
                 double deltaY1 = currentY-previousY;
                 //telemetry.addData("Delta y1", deltaY1);
 
-                double currentX = middleWheelInches-((method.getHeadingRaw()/360)*method.encCircX);
+                double currentX = middleWheelInches-((method.getHeadingRawComp()/360)*method.encCircX);
                 double deltaX1 = currentX-previousX;
                 //telemetry.addData("Delta x1", deltaX1);
 

@@ -20,7 +20,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
-//@Disabled
 @TeleOp(name = "codeCreatorRed", group = "Taus")
 //@Config
 
@@ -134,7 +133,7 @@ public class codeCreatorRed extends LinearOpMode {
 
             //shoot();
             //updateShootingParameters();
-            toAngle();
+            //toAngle();
             powerShot();
             startstop();
 
@@ -199,18 +198,36 @@ public class codeCreatorRed extends LinearOpMode {
 
         if(Math.abs(gamepad1.right_stick_x)>.05) {
             rotationValue = gamepad1.right_stick_x;
+            anglingPow = 0;
+            angling.interrupt();
+            shooting = false;
+        }
+        else if(gamepad1.right_trigger>.1){
+            rotationValue = .2;
+            anglingPow = 0;
+            angling.interrupt();
+            shooting = false;
+        }
+        else if(gamepad1.left_trigger>.1){
+            rotationValue = -.2;
+            anglingPow = 0;
+            angling.interrupt();
+            shooting = false;
+        }
+        else if (shooting&& Math.abs(method.getHeading()-method.shootingAngle)>1){
+            rotationValue=anglingPow;
         }
         else{
             rotationValue=0;
         }
         if(Math.abs(gamepad1.left_stick_x)>.05) {
-            stickX = gamepad1.left_stick_x;
+            stickX = -gamepad1.left_stick_x;
         }
         else {
             stickX=0;
         }
         if(Math.abs(gamepad1.left_stick_y)>.05) {
-            stickY = -gamepad1.left_stick_y;
+            stickY = gamepad1.left_stick_y;
         }
         else {
             stickY=0;
@@ -251,10 +268,10 @@ public class codeCreatorRed extends LinearOpMode {
 
 //        multiplier = method.errorToPower(method.runtime2.seconds(), scale, 0, 1, 0);
 
-        method.robot.frontLeftMotor.setPower((((xComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);
+        method.robot.frontLeftMotor.setPower((((xComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);//x
         method.robot.backRightMotor.setPower((((xComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);//x
         method.robot.backLeftMotor.setPower((((yComponent + rotationValue) / scaleFactor)*multiplier)*speedFactor);//y
-        method.robot.frontRightMotor.setPower((((yComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);
+        method.robot.frontRightMotor.setPower((((yComponent - rotationValue) / scaleFactor)*multiplier)*speedFactor);//y
 
     }
 
@@ -427,7 +444,7 @@ public class codeCreatorRed extends LinearOpMode {
         else if(Math.abs(gamepad2.left_stick_y)>.05&&rings>2){
             method.setIntakePower(1*-gamepad2.left_stick_y);
         }
-        else if(gamepad1.left_stick_button){
+        else if(gamepad1.a){
             method.setIntakePower(1);
         }
         else{
@@ -435,21 +452,23 @@ public class codeCreatorRed extends LinearOpMode {
         }
     }
     public void claw(){
-        if((gamepad2.b && !isBPressed)){//||(method.runtime3.seconds()>87&&method.runtime3.seconds()<90)
+        if(((gamepad2.b||gamepad1.b) && !isBPressed)){//||(method.runtime3.seconds()>87&&method.runtime3.seconds()<90)
             isBPressed = true;
             if (!clawClosed) {
+                pickUp.add(method.runtime3.seconds());
                 method.controlClawServo(.25);//closing claw
                 isRunning = true;
                 method.runtime.reset();
 
             }
             else{
+                drop.add(method.runtime3.seconds());
                 method.controlArmServo(1);//moving arm down
                 isRunning = true;
                 method.runtime.reset();
             }
         }
-        if(!gamepad2.b){
+        if(!gamepad2.b&&gamepad1.b){
             isBPressed = false;
         }
         if (isRunning){
@@ -523,7 +542,7 @@ public class codeCreatorRed extends LinearOpMode {
                 k+=pickUp.toString() + "\n";
                 k+=indexer.toString() + "\n";
                 k+=toAngle.toString() + "\n";
-                k+=stoptime + "\n";
+                k+=stoptime;
                 ReadWriteFile.writeFile(file, k);
             }
             method.runtime3.reset();
@@ -552,14 +571,7 @@ public class codeCreatorRed extends LinearOpMode {
             currentTime = method.runtime3.seconds();
             play.start();
             while (stoptime>currentTime){
-                currentTime = method.runtime3.seconds();
-                double closest = Double.MAX_VALUE;
-                for (double i : speedsBl.keySet()){
-                    if (Math.abs(currentTime-i)<Math.abs(currentTime-closest)){
-                        closest = i;
-                    }
-                }
-                calcTime = closest;
+
                 telemetry.addData("playback", currentTime);
                 telemetry.addData("time", currentTime);
                 telemetry.update();
@@ -638,6 +650,13 @@ public class codeCreatorRed extends LinearOpMode {
             //telemetry.log().add("running");
             while (!isInterrupted()) {
                 currentTime = method.runtime3.seconds();
+                double closest = Double.MAX_VALUE;
+                for (double i : speedsBl.keySet()){
+                    if (Math.abs(currentTime-i)<Math.abs(currentTime-closest)){
+                        closest = i;
+                    }
+                }
+                calcTime = closest;
                 //telemetry.addData("recording", calcTime);
                 method.robot.backLeftMotor.setVelocity(speedsBl.get(calcTime));
                 method.robot.frontRightMotor.setVelocity(speedsFr.get(calcTime));
@@ -656,7 +675,12 @@ public class codeCreatorRed extends LinearOpMode {
         @Override
         public void run() {
             while(!isInterrupted()) {
-                method.updateShootingParameters4();
+                if (middleGoal) {
+                    method.updateShootingParameters4();
+                }
+                else{
+                    method.updateShootingParameters2();
+                }
 
                 anglingPow = method.toAngle2(method.shootingAngle, 1);
             }
@@ -683,7 +707,7 @@ public class codeCreatorRed extends LinearOpMode {
                 double deltaY1 = currentY-previousY;
                 //telemetry.addData("Delta y1", deltaY1);
 
-                double currentX = middleWheelInches-((method.getHeadingRaw()/360)*method.encCircX);
+                double currentX = middleWheelInches-((method.getHeadingRawComp()/360)*method.encCircX);
                 double deltaX1 = currentX-previousX;
                 //telemetry.addData("Delta x1", deltaX1);
 

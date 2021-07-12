@@ -3,8 +3,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
-//@Disabled
+@Disabled
 @Autonomous(name = "BlueLeft2", group = "Taus")
 public class BlueLeft2 extends AutonomousMethods {
 
@@ -34,24 +35,23 @@ public class BlueLeft2 extends AutonomousMethods {
         switch (numberOfRings){
             case 0:
                 //code
-
                 forward(.5, 2, 11);
-                shoot(-2, (2195*28)/60.0);
+                shoot(-2, (2175*28)/60.0);
                 toAngle(60, 1);
                 dropWobbleGoal();
-                strafeRight(.5, 0, 3);
+                //strafeRight(.5, 0, 3);
                 toAngle(0, 1);
                 backward(.5, 1, 0);
                 break;
             case 1:
                 //code
                 forward(.5, 2, 14);//16
-                shoot(0, (2195*28)/60.0);
+                shoot(0, (2175*28)/60.0);
                 toAngle(0, 1);
                 forward(.5, 1, 14);//12
-                toAngle(-180, 1);
+                toAngle(176, 1);
                 dropWobbleGoal();
-                strafeRight(.5, 0, 2);
+                strafeRight(.5, 0, 4);
                 forward(.5, 2, 12);
                 toAngle(-90, 1);
                 setIntakePower(1);
@@ -59,26 +59,27 @@ public class BlueLeft2 extends AutonomousMethods {
                 forward(.5, 0, 9);
                 toAngle(0, 1);
                 forward(.5, 0, 23);
-                shoot(0, (2195*28)/60.0);
+                shoot(0, (2175*28)/60.0);
                 toAngle(0, 1);
                 forward(.5, 0, 11);
                 break;
             case 4:
                 //code
                 forward(.5, 1, 15);
-                shoot(-2, (2285*28)/60.0);
+                shoot(-2, (2265.5*28)/60.0);
                 toAngle(-90, 1);
                 setIntakePower(1);
-                backward(1, 0, 6, 6, 2, 6);
-                forward(1, 0, 6);
-                shoot(-2, (2285*28)/60.0);
+                backward(1, 0, 7, 6, 2, 0);
+                forward(1, 0, 7);
+                shoot(0, (2265.5*28)/60.0);
                 toAngle(-90, 1);
                 setIntakePower(1);
-                backward(.3, 0, 23);
-                forward(.3, 0, 12);
+                backward(.3, 0, 8);
+                backward(.05, 0, 10);
+                forward(.5, 0, 18);
                 toAngle(0, 1);
-                forward(.5, 0, 20);
-                shoot(-2, (2150*28)/60.0);
+                forward(.5, 0, 18);
+                shoot(-2, (2175*28)/60.0);
                 toAngle(0, 1);
                 forward(.7, 1, 24);
                 toAngle(60, 1);

@@ -4,6 +4,9 @@ package org.firstinspires.ftc.teamcode;
 
 //import com.acmerobotics.dashboard.FtcDashboard;
 //import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -12,8 +15,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.io.File;
 import java.util.LinkedHashMap;
-
-@TeleOp(name = "Double Driver red", group = "Taus")
+@Disabled
+@TeleOp(name = "Double Driver blue", group = "Taus")
 
 //@Config
 //hi
@@ -69,12 +72,18 @@ public class TeleopBlue extends LinearOpMode {
     boolean clicked = false;
     boolean shootingTime = false;
 
+    FtcDashboard dash = FtcDashboard.getInstance();
+
+    TelemetryPacket packet = new TelemetryPacket();
+
     @Override
     //run file
     public void runOpMode() {
         method.robot.initializeHardware(hardwareMap);
         telemetry.addLine(method.magic8());
         telemetry.update();
+        method.currentYPosition = 72;
+        method.currentXPosition = 36;
 
         method.robot.shooter.setVelocityPIDFCoefficients(method.p,method.i,method.d,method.f);
         method.resetAngle = method.getHeading();
@@ -100,7 +109,16 @@ public class TeleopBlue extends LinearOpMode {
         method.shooting.reset();
         method.intaking.reset();
         pos.start();
+        packet.fieldOverlay().clear();
         while (opModeIsActive()) {
+            packet.put("x", method.currentXPosition);
+            packet.put("y", method.currentYPosition);
+            packet.put("angle", method.getHeading2());
+            packet.fieldOverlay().clear();
+            packet.fieldOverlay().setFill("blue").fillRect(method.currentYPosition-9-72, -(method.currentXPosition+9-72), 18, 18);
+            dash.sendTelemetryPacket(packet);
+            packet.clearLines();
+
             drive();
 
             shooter();
@@ -130,7 +148,6 @@ public class TeleopBlue extends LinearOpMode {
 
             telemetry.update();
             telemetry.clear();
-
         }
 
         method.setAllMotorsTo(0);
@@ -302,7 +319,7 @@ public class TeleopBlue extends LinearOpMode {
             middleGoal = false;
         }
         if(gamepad2.right_trigger>.1){
-            method.currentXPosition = 36;
+            method.currentXPosition = 108;
             method.currentYPosition = 72;
             method.updateShootingParameters4();
             shooting = true;
@@ -313,22 +330,24 @@ public class TeleopBlue extends LinearOpMode {
             shooting=true;
         }
         if(gamepad1.b){
-            middleGoal = true;
+            middleGoal = !middleGoal;
         }
 
         if (shooting&&!(Math.abs(gamepad1.right_stick_x)>.1)&&!(gamepad1.right_trigger>.1)&&!(gamepad1.left_trigger>.1)){
-            if(!angling.isAlive()) {
-                angling.start();
-                shooting = true;
-            }
+//            if(!angling.isAlive()) {
+//                angling.start();
+//
+//            }
+            shooting = true;
             //method.toAngle(method.shootingAngle, 1);
         }
         else{
-            if (angling.isAlive()){
-                angling.interrupt();
-                anglingPow = 0;
-                shooting=false;
-            }
+//            if (angling.isAlive()){
+//                angling.interrupt();
+//                anglingPow = 0;
+//
+//            }
+            shooting=false;
         }
     }
     public void powerShot(){
@@ -359,7 +378,7 @@ public class TeleopBlue extends LinearOpMode {
         }
         if(gamepad2.dpad_right){
             method.setShooterPower(method.powerShotPower);
-            method.toAngle(-16, .5);
+            method.toAngle(-6, .5);
             method.shootRings(1);
             method.setShooterPower(method.shooterPower);
             if (rings>0) {
@@ -692,6 +711,16 @@ public class TeleopBlue extends LinearOpMode {
         }
         return newPoints;
     }
+    public void adjust (){
+        if (middleGoal) {
+            method.updateShootingParameters3();
+        }
+        else{
+            method.updateShootingParameters();
+        }
+
+            anglingPow = method.toAngle2(method.shootingAngle, 1);
+    }
 
     //threads
     private class Adjusting extends Thread {
@@ -700,8 +729,13 @@ public class TeleopBlue extends LinearOpMode {
         }
         @Override
         public void run() {
-            while(!isInterrupted()) {
-                method.updateShootingParameters4();
+            while(!isInterrupted()&opModeIsActive()) {
+                if (middleGoal) {
+                    method.updateShootingParameters3();
+                }
+                else{
+                    method.updateShootingParameters();
+                }
 
                 anglingPow = method.toAngle2(method.shootingAngle, 1);
             }
@@ -714,9 +748,9 @@ public class TeleopBlue extends LinearOpMode {
 
         @Override
         public void run() {
-            while (!isInterrupted()) {
+            while (!isInterrupted()&opModeIsActive()) {
                 if (gamepad1.dpad_left) {
-                    method.currentXPosition=108;
+                    method.currentXPosition=36;
                     method.currentYPosition=72;
                 }
                 leftWheelInches = (method.robot.intake2.getCurrentPosition() / method.encoderCountsEnc) * Math.PI * method.wheelDiameterEnc * method.yMult;
@@ -728,7 +762,7 @@ public class TeleopBlue extends LinearOpMode {
                 double deltaY1 = currentY-previousY;
                 //telemetry.addData("Delta y1", deltaY1);
 
-                double currentX = middleWheelInches-((method.getHeadingRaw()/360)*method.encCircX);
+                double currentX = middleWheelInches-((method.getHeadingRawComp()/360)*method.encCircX);
                 double deltaX1 = currentX-previousX;
                 //telemetry.addData("Delta x1", deltaX1);
 
@@ -787,6 +821,7 @@ public class TeleopBlue extends LinearOpMode {
 //                    telemetry.update();
                 }
                 toAngle();
+                adjust();
             }
         }
     }
